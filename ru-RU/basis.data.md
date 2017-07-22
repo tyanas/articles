@@ -15,9 +15,9 @@
 <!-- MarkdownTOC -->
 
 - [AbstractData](#abstractdata)
-  - [Состояние](#Состояние)
-  - [Подписка](#Подписка)
-  - [Абстрактная синхронизация](#Абстрактная-синхронизация)
+  - [Состояние](#%D0%A1%D0%BE%D1%81%D1%82%D0%BE%D1%8F%D0%BD%D0%B8%D0%B5)
+  - [Подписка](#%D0%9F%D0%BE%D0%B4%D0%BF%D0%B8%D1%81%D0%BA%D0%B0)
+  - [Абстрактная синхронизация](#%D0%90%D0%B1%D1%81%D1%82%D1%80%D0%B0%D0%BA%D1%82%D0%BD%D0%B0%D1%8F-%D1%81%D0%B8%D0%BD%D1%85%D1%80%D0%BE%D0%BD%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8F)
 
 <!-- /MarkdownTOC -->
 
@@ -213,6 +213,7 @@ basis.data.SUBSCRIPTION.addProperty('foo');
 // после этого будет доступно константное значение
 // для этого поля basis.data.SUBSCRIPTION.FOO
 
+// сложный случай: нужен нестандартный handler или нестандартный action
 basis.data.SUBSCRIPTION.add(
   // название кода
   'BAR',
@@ -244,21 +245,48 @@ basis.data.SUBSCRIPTION.add(
 
   * basis.data:
 
-    * DELEGATE - свойство delegate (delegateChanged);
-    * TARGET - свойство target (targetChanged);
-    * DATASET - свойство dataset (datasetChanged).
+    * DELEGATE - свойство `delegate` (событие `delegateChanged`);
+    * TARGET - свойство `target` (событие `targetChanged`);
+    * DATASET - свойство `dataset` (событие `datasetChanged`).
+    * VALUE - свойство `value` (событие `changed`).
 
   * basis.data.dataset:
 
-    * SOURCE - свойство source (sourceChanged) и элементы свойства sources (sourcesChanged);
-    * MINUEND - свойство minuend (minuendChanged);
-    * SUBTRAHEND - свойство subtrahend (subtrahendChanged).
+    * SOURCE - свойство `source` (событие `sourceChanged`) и свойство `sources` для датасетов с несколькими источниками, см. например [Merge](dataset/merge.md) (событие `sourcesChanged`);
+    * MINUEND - свойство `minuend` (событие `minuendChanged`);
+    * SUBTRAHEND - свойство `subtrahend` (событие `subtrahendChanged`).
 
   * basis.dom.wrapper:
 
-    * DATASOURCE - свойство dataSource (dataSourceChanged);
-    * OWNER - свойство owner (ownerChanged).
+    * DATASOURCE - свойство `dataSource` (событие `dataSourceChanged`);
+    * OWNER - свойство `owner` (событие `ownerChanged`);
+    * CHILD – свойство `childNodes` (событие `childNodesModified`, см. также [UI биндинги](basis.ui_bindings.md) и [Выделение (selection)](basis.dom.wrapper_selection.md));
+    * SATELLITE – свойство `satellite` (событие `satelliteChanged`).
 
+  * basis.data.object
+
+    * также событие `sourceChanged` есть у объекта. Чтобы отличить свойства `source` объекта и свойство `source` датасета с точки зрения SUBSCRIPTION, это похожее свойство регистрируется с именем `OBJECTSOURCE`. Используется для подписки `basis.data.object.Merge` на изменение своих источников-объектов (а не источников-датасетов, как у `basis.data.dataset.Merge`).
+
+Кроме того, существуют `SUBSCRIPTION.ALL`, "помнящий" все зарегистрированные на данный момент типы подписок, и `SUBSCRIPTION.NONE` для обозначения факта, что, например, датасет по умолчанию не подписан ни на что. Чтобы понять это глубже, можно взглянуть на реализацию `AbstractData` – штуки, которая лежит в основе всех сущностей для работы с данныим в basis.js.
+```
+var AbstractData = Emitter.subclass({
+  ...
+  subscribeTo: SUBSCRIPTION.NONE,
+  ...
+
+  // Теоретическая возможность динамически менять подписчиков. См. ниже о практической пользе этого :)
+  setSubscription: function(subscriptionType){
+    // с помощью битовых операций можно быстро выяснить, нужно ли менять тип подписки
+    var newSubscriptionType = subscriptionType & SUBSCRIPTION.ALL;
+    var delta = this.subscribeTo ^ newSubscriptionType;
+
+    if (delta)
+      ... // действительно назначаем новый тип подписки
+  },
+})
+```
+
+<!-- TODO откуда берется http://basisjs.com/basisjs/docs/#basis.data.SUBSCRIPTION.INHERITDOC и зачем? -->
 
 ### Абстрактная синхронизация
 
